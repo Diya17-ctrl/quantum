@@ -370,3 +370,4 @@ st.markdown("""
 st.markdown("""
 **project_by:**Diya Reshma Shaik
 **email:**shaikdiyareshma@gmail.com
+""")
