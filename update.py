@@ -340,10 +340,13 @@ if st.session_state.total_bits > 0:
         ax.plot([2.05, 3.2], [0.5, 0.5], color='#ff9800', linewidth=2)
         
         # Add title
-        ax.text(1.75, 2.2, '┌───┐┌─┐', fontsize=11, color='#aaa', family='monospace')
-        ax.text(1.75, 2.0, 'q: ┤ H ├┤M├', fontsize=11, color='#aaa', family='monospace')
-        ax.text(1.75, 1.8, '└───┘└╥┘', fontsize=11, color='#aaa', family='monospace')
-        ax.text(1.75, 1.6, 'c: 1/═════╩═', fontsize=11, color='#aaa', family='monospace')
+      # Add title
+      # Add title
+        #ax.text(1.75, 2.2, '┌───┐┌─┐', fontsize=11, color='#aaa', family='monospace')
+        #ax.text(1.75, 2.0, 'q: ┤ H ├┤M├', fontsize=11, color='#aaa', family='monospace')
+       # ax.text(1.75, 1.8, '└───┘└╥┘', fontsize=11, color='#aaa', family='monospace')
+       # ax.text(1.75, 1.6, 'c: 1/═════╩═', fontsize=11, color='#aaa', family='monospace')
+        
         
         st.pyplot(fig, use_container_width=True)
         
@@ -362,5 +365,5 @@ if st.session_state.total_bits > 0:
 # ==========================================
 st.markdown("---")
 st.markdown("""
-**Backend:** Qiskit Aer Simulator | **Updated:** Just now
+**Backend:** Qiskit Aer Simulator | 
 """)
