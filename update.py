@@ -368,6 +368,6 @@ st.markdown("""
 **Backend:** Qiskit Aer Simulator | 
 """)
 st.markdown("""
-**project_by:**Diya Reshma Shaik
-**email:**shaikdiyareshma@gmail.com
+ project_by: Diya Reshma Shaik
+  email: shaikdiyareshma@gmail.com
 """)
