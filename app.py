@@ -2,116 +2,290 @@ import streamlit as st
 from qiskit import QuantumCircuit
 from qiskit_aer import AerSimulator
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import time
+from datetime import datetime, timedelta
+import numpy as np
+import io
 
 # ==========================================
 # PAGE CONFIG
 # ==========================================
-
 st.set_page_config(
     page_title="Quantum Random Number Generator",
     page_icon="⚛️",
-    layout="centered"
+    layout="wide"
 )
 
 # ==========================================
-# TITLE
+# CUSTOM CSS
 # ==========================================
-
 st.markdown("""
-# ⚛️ Quantum Random Number Generator
+<style>
+    [data-testid="stMetricValue"] {
+        font-size: 28px;
+        font-weight: bold;
+    }
+    .stMetricLabel {
+        font-size: 14px;
+        color: #888;
+    }
+    .header-title {
+        font-size: 36px;
+        font-weight: bold;
+        color: #fff;
+        margin-bottom: 5px;
+    }
+    .header-subtitle {
+        font-size: 16px;
+        color: #aaa;
+    }
+    .live-indicator {
+        color: #00FF41;
+        font-weight: bold;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-Generate true quantum randomness using Qiskit
+# ==========================================
+# SESSION STATE
+# ==========================================
+if 'bits_generated' not in st.session_state:
+    st.session_state.bits_generated = ""
+if 'total_bits' not in st.session_state:
+    st.session_state.total_bits = 0
+    st.session_state.start_time = None
+    st.session_state.is_running = False
+    st.session_state.bit_chunks = []
+
+# ==========================================
+# HEADER
+# ==========================================
+col1, col2 = st.columns([1, 1])
+with col1:
+    st.markdown('<div class="header-title">⚛️ Quantum Random Number Generator</div>', unsafe_allow_html=True)
+    st.markdown('<div class="header-subtitle">Generating true random numbers using quantum mechanics</div>', unsafe_allow_html=True)
+
+with col2:
+    col_a, col_b = st.columns([1, 1])
+    with col_a:
+        status = '<span class="live-indicator">● Connected to Quantum Backend</span>'
+        st.markdown(status, unsafe_allow_html=True)
+    with col_b:
+        if st.button("🎲 Generate New", use_container_width=True, key="generate_btn"):
+            st.session_state.is_running = True
+            st.session_state.bits_generated = ""
+            st.session_state.total_bits = 0
+            st.session_state.start_time = datetime.now()
+            st.session_state.bit_chunks = []
+
+# ==========================================
+# MAIN CONTENT
+# ==========================================
+if st.session_state.is_running:
+    # Generate random bits in batches
+    simulator = AerSimulator()
+    qc = QuantumCircuit(1, 1)
+    qc.h(0)
+    qc.measure(0, 0)
+    
+    # Generate 10,240 bits like in the screenshot
+    total_to_generate = 10240
+    bits_per_batch = 256
+    
+    progress_bar = st.progress(0)
+    placeholder = st.empty()
+    
+    for i in range(0, total_to_generate, bits_per_batch):
+        job = simulator.run(qc, shots=bits_per_batch, memory=True)
+        result = job.result()
+        memory = result.get_memory()
+        batch_bits = ''.join(memory)
+        
+        st.session_state.bits_generated += batch_bits
+        st.session_state.total_bits += bits_per_batch
+        st.session_state.bit_chunks.append(batch_bits)
+        
+        progress = min(st.session_state.total_bits / total_to_generate, 1.0)
+        progress_bar.progress(progress)
+        
+        with placeholder.container():
+            st.write(f"Generating... {st.session_state.total_bits}/{total_to_generate} bits")
+        
+        time.sleep(0.1)
+    
+    progress_bar.empty()
+    placeholder.empty()
+    st.session_state.is_running = False
+
+# ==========================================
+# MAIN LAYOUT
+# ==========================================
+if st.session_state.total_bits > 0:
+    # Calculate elapsed time
+    elapsed = datetime.now() - st.session_state.start_time
+    elapsed_seconds = elapsed.total_seconds()
+    bit_rate = st.session_state.total_bits / elapsed_seconds if elapsed_seconds > 0 else 0
+    
+    left_col, right_col = st.columns([1.2, 1])
+    
+    with left_col:
+        # ==========================================
+        # RANDOM BIT STREAM
+        # ==========================================
+        st.subheader("Random Bit Stream")
+        
+        # Format bits in rows of 40 for display
+        bits = st.session_state.bits_generated
+        bit_rows = [bits[i:i+40] for i in range(0, len(bits), 40)]
+        bit_display = "\n".join(bit_rows[:9])  # Show first 9 rows
+        
+        st.code(bit_display, language="text")
+        
+        col_pause, col_clear, col_download = st.columns(3)
+        with col_pause:
+            st.button("⏸ Pause", use_container_width=True, disabled=True)
+        with col_clear:
+            if st.button("🗑 Clear", use_container_width=True):
+                st.session_state.bits_generated = ""
+                st.session_state.total_bits = 0
+                st.session_state.bit_chunks = []
+                st.session_state.start_time = None
+                st.rerun()
+        with col_download:
+            if st.button("⬇ Download", use_container_width=True):
+                st.download_button(
+                    label="Download Bits",
+                    data=st.session_state.bits_generated,
+                    file_name="quantum_bits.txt",
+                    mime="text/plain"
+                )
+        
+        # ==========================================
+        # LIVE HISTOGRAM
+        # ==========================================
+        st.subheader("Live Histogram")
+        
+        # Create histogram data from chunks
+        chunk_zeros = []
+        chunk_ones = []
+        for chunk in st.session_state.bit_chunks:
+            chunk_zeros.append(chunk.count('0'))
+            chunk_ones.append(chunk.count('1'))
+        
+        fig, ax = plt.subplots(figsize=(10, 4), facecolor='#0E1117')
+        ax.set_facecolor('#0E1117')
+        
+        x = np.arange(len(chunk_zeros))
+        width = 0.35
+        
+        bars1 = ax.bar(x - width/2, chunk_zeros, width, label='0 (Zeros)', color='#1E88E5', alpha=0.8)
+        bars2 = ax.bar(x + width/2, chunk_ones, width, label='1 (Ones)', color='#E91E63', alpha=0.8)
+        
+        ax.set_ylabel('Count', color='#888')
+        ax.set_xlabel('', color='#888')
+        ax.set_ylim(0, max(max(chunk_zeros), max(chunk_ones)) * 1.1)
+        
+        # Custom x-axis labels
+        ax.set_xticks([0, len(chunk_zeros)-1])
+        ax.set_xticklabels(['Older', 'Newer'])
+        ax.tick_params(colors='#888')
+        ax.legend(loc='upper left', framealpha=0.1)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_color('#444')
+        ax.spines['bottom'].set_color('#444')
+        
+        st.pyplot(fig, use_container_width=True)
+    
+    with right_col:
+        # ==========================================
+        # STATISTICS
+        # ==========================================
+        st.subheader("Statistics")
+        
+        stat_col1, stat_col2 = st.columns(2)
+        with stat_col1:
+            st.metric("Total Bits Generated", f"{st.session_state.total_bits:,}")
+            st.metric("Bit Rate", f"{bit_rate:,.0f} bits/s")
+        
+        with stat_col2:
+            time_str = f"{int(elapsed_seconds//60):02d}:{int(elapsed_seconds%60):02d}"
+            st.metric("Generation Time", time_str)
+            st.metric("Quantum Source", "Qiskit Simulator")
+        
+        # ==========================================
+        # BIT DISTRIBUTION
+        # ==========================================
+        st.subheader("Bit Distribution")
+        
+        zeros = st.session_state.bits_generated.count('0')
+        ones = st.session_state.bits_generated.count('1')
+        total = zeros + ones
+        
+        zero_percent = (zeros / total * 100) if total > 0 else 0
+        one_percent = (ones / total * 100) if total > 0 else 0
+        balance = abs(zero_percent - 50)
+        
+        # Donut chart
+        fig, ax = plt.subplots(figsize=(8, 6), facecolor='#0E1117')
+        ax.set_facecolor('#0E1117')
+        
+        sizes = [zeros, ones]
+        colors = ['#1E88E5', '#E91E63']
+        explode = (0.05, 0.05)
+        
+        wedges, texts, autotexts = ax.pie(
+            sizes,
+            labels=['0 (Zeros)', '1 (Ones)'],
+            colors=colors,
+            autopct='',
+            startangle=90,
+            explode=explode,
+            textprops={'color': '#aaa', 'fontsize': 10}
+        )
+        
+        # Draw donut hole
+        centre_circle = patches.Circle((0, 0), 0.70, fc='#0E1117')
+        ax.add_artist(centre_circle)
+        
+        st.pyplot(fig, use_container_width=True)
+        
+        # Distribution stats
+        col_dist1, col_dist2 = st.columns(2)
+        with col_dist1:
+            st.write(f"**0 (Zeros)** {zeros:,} ({zero_percent:.2f}%)")
+            st.write(f"**1 (Ones)** {ones:,} ({one_percent:.2f}%)")
+        with col_dist2:
+            st.write(f"**Balance** {balance:.2f}%")
+        
+        # ==========================================
+        # QUANTUM CIRCUIT
+        # ==========================================
+        st.subheader("Quantum Circuit Used")
+        
+        qc = QuantumCircuit(1, 1)
+        qc.h(0)
+        qc.measure(0, 0)
+        
+        circuit_text = str(qc.draw(output='text'))
+        st.code(circuit_text, language="text")
+        
+        st.markdown("""
+        **How it works:**
+        - Hadamard gate puts the qubit in superposition
+        - Measurement gives 0 or 1 with equal probability
+        """)
+
+# ==========================================
+# INFO SECTION
+# ==========================================
+st.markdown("---")
+st.markdown("""
+### ⚛️ What makes it quantum?
+We use quantum superposition and measurement randomness to generate truly unpredictable numbers.
 """)
 
-# ==========================================
-# BUTTON
-# ==========================================
-
-if st.button("🎲 Generate Quantum Bits"):
-
-    # ==========================================
-    # CREATE CIRCUIT
-    # ==========================================
-
-    qc = QuantumCircuit(1, 1)
-
-    qc.h(0)
-
-    qc.measure(0, 0)
-
-    # ==========================================
-    # SHOW CIRCUIT
-    # ==========================================
-
-    st.subheader("⚛️ Quantum Circuit Used")
-
-    st.code(qc.draw(output='text'))
-
-    # ==========================================
-    # RUN SIMULATOR
-    # ==========================================
-
-    simulator = AerSimulator()
-
-    job = simulator.run(
-        qc,
-        shots=100,
-        memory=True
-    )
-
-    result = job.result()
-
-    memory = result.get_memory()
-
-    random_bits = ''.join(memory)
-
-    # ==========================================
-    # COUNT BITS
-    # ==========================================
-
-    zeros = random_bits.count('0')
-
-    ones = random_bits.count('1')
-
-    # ==========================================
-    # DISPLAY RANDOM BITS
-    # ==========================================
-
-    st.subheader("Generated Quantum Bitstream")
-
-    st.code(random_bits)
-
-    # ==========================================
-    # STATS
-    # ==========================================
-
-    col1, col2 = st.columns(2)
-
-    col1.metric("Zeros", zeros)
-
-    col2.metric("Ones", ones)
-
-    # ==========================================
-    # HISTOGRAM
-    # ==========================================
-
-    fig, ax = plt.subplots()
-
-    ax.bar(
-        ['0', '1'],
-        [zeros, ones]
-    )
-
-    ax.set_title("Bit Distribution")
-
-    ax.set_xlabel("Bit")
-
-    ax.set_ylabel("Count")
-
-    st.pyplot(fig)
-
-    # ==========================================
-    # SUCCESS
-    # ==========================================
-
-    st.success("✅ Quantum randomness generated successfully!")
+st.markdown("""
+**Backend:** Qiskit Aer Simulator | **Updated:** Just now
+""")
