@@ -226,50 +226,6 @@ if st.session_state.total_bits > 0:
         zero_percent = (zeros / total * 100) if total > 0 else 0
         one_percent = (ones / total * 100) if total > 0 else 0
         balance = abs(zero_percent - 50)
-            # ==========================================
-            # COUNT BITS
-            # ==========================================
-        
-            zeros = random_bits.count('0')
-        
-            ones = random_bits.count('1')
-        
-            # ==========================================
-            # DISPLAY RANDOM BITS
-            # ==========================================
-        
-            st.subheader("Generated Quantum Bitstream")
-        
-            st.code(random_bits)
-        
-            # ==========================================
-            # STATS
-            # ==========================================
-        
-            col1, col2 = st.columns(2)
-        
-            col1.metric("Zeros", zeros)
-        
-            col2.metric("Ones", ones)
-        
-            # ==========================================
-            # HISTOGRAM
-            # ==========================================
-        
-            fig, ax = plt.subplots()
-        
-            ax.bar(
-                ['0', '1'],
-                [zeros, ones]
-            )
-        
-            ax.set_title("Bit Distribution")
-        
-            ax.set_xlabel("Bit")
-        
-            ax.set_ylabel("Count")
-
-    st.pyplot(fig)
         # Donut chart
         fig, ax = plt.subplots(figsize=(8, 6), facecolor='#0E1117')
         ax.set_facecolor('#0E1117')
