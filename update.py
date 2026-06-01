@@ -353,7 +353,7 @@ if st.session_state.total_bits > 0:
         st.markdown("""
         **How it works:**
         - 🔵 **Hadamard Gate** (H) puts the qubit in superposition
-        - 📊 **Measurement** gives 0 or 1 with equal probability
+        -  **Measurement** gives 0 or 1 with equal probability
         """)
         
         qc = QuantumCircuit(1, 1)
@@ -367,3 +367,6 @@ st.markdown("---")
 st.markdown("""
 **Backend:** Qiskit Aer Simulator | 
 """)
+st.markdown("""
+**project_by:**Diya Reshma Shaik
+**email:**shaikdiyareshma@gmail.com
